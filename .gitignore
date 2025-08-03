@@ -7,3 +7,5 @@ outputs/
 notebooks/creditcard.csv
 notebooks/wallet_fraud_readable.csv
 notebooks/X_encoded.csv
+raw_data/creditcard.csv
+notebooks/*.csv
