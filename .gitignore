@@ -4,3 +4,6 @@ outputs/
 *.pyc
 *.pkl
 .DS_Store
+notebooks/creditcard.csv
+notebooks/wallet_fraud_readable.csv
+notebooks/X_encoded.csv
