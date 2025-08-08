@@ -1,12 +1,12 @@
-#cd ~/Desktop/detecting-fraud-mobile-wallets/notebooks
-#streamlit run app.py
-
+# cd ~/Desktop/detecting-fraud-mobile-wallets/notebooks
+# streamlit run app.py
 
 import streamlit as st
 import numpy as np
 import joblib
 import time
 import pandas as pd
+from datetime import time as dtime  # For default time
 
 # Set page configuration
 st.set_page_config(page_title="Mobile Wallet Fraud Detection", page_icon="📱", layout="wide")
@@ -59,13 +59,15 @@ with tab1:
         col1, col2 = st.columns(2)
 
         with col1:
-            time_input = st.number_input(
-                "Transaction Time (seconds)",
-                min_value=0.0,
-                step=1.0,
-                value=94819.0,  # Legitimate mean
-                help="Time in seconds since the first transaction. Fraud mean: 79719 (~22 hours). Legitimate mean: 94819 (~26 hours)."
+            # UPDATED: Take time in HH:MM AM/PM format instead of seconds
+            time_obj = st.time_input(
+                "Transaction Time (e.g., 6:30 PM)",
+                value=dtime(18, 30),  # Default 6:30 PM
+                help="Choose transaction time. It will be converted to seconds from midnight."
             )
+            # Convert to seconds
+            time_input = time_obj.hour * 3600 + time_obj.minute * 60 + time_obj.second
+
             amount_input = st.number_input(
                 "Transaction Amount (PKR)",
                 min_value=0.0,
@@ -78,19 +80,19 @@ with tab1:
             operator_input = st.selectbox(
                 "Operator",
                 ["EasyPaisa", "JazzCash", "SadaPay"],
-                index=0,  # Default: EasyPaisa
+                index=0,
                 help="JazzCash (50%) and SadaPay (43%) are common in fraud. Legitimate: ~25% each."
             )
             region_input = st.selectbox(
                 "Region",
                 ["Balochistan", "KPK", "Punjab", "Sindh"],
-                index=0,  # Default: Balochistan
+                index=0,
                 help="Sindh (46%) and Punjab (45%) are common in fraud. Legitimate: ~25% each."
             )
             txn_type_input = st.selectbox(
                 "Transaction Type",
                 ["Bank Transfer", "Bill Payment", "Mobile Load", "Send Money"],
-                index=0,  # Default: Bank Transfer
+                index=0,
                 help="Send Money (48%) is common in fraud. Legitimate: ~25% each."
             )
 
@@ -128,24 +130,24 @@ with tab1:
                 st.error("Time and Amount must be non-negative.")
             else:
                 with st.spinner("Analyzing transaction..."):
-                    time.sleep(1)  # Simulate processing
-                    # One-hot encoding (match X_encoded.csv)
+                    time.sleep(1)
+                    # One-hot encoding (match training)
                     operator_encoded = [
-                        1 if operator_input == "JazzCash" else 0,  # Operator_JazzCash
-                        1 if operator_input == "SadaPay" else 0,  # Operator_SadaPay
+                        1 if operator_input == "JazzCash" else 0,
+                        1 if operator_input == "SadaPay" else 0,
                     ]
                     region_encoded = [
-                        1 if region_input == "KPK" else 0,  # Region_KPK
-                        1 if region_input == "Punjab" else 0,  # Region_Punjab
-                        1 if region_input == "Sindh" else 0,  # Region_Sindh
+                        1 if region_input == "KPK" else 0,
+                        1 if region_input == "Punjab" else 0,
+                        1 if region_input == "Sindh" else 0,
                     ]
                     txn_type_encoded = [
-                        1 if txn_type_input == "Bill Payment" else 0,  # Txn_Type_Bill Payment
-                        1 if txn_type_input == "Mobile Load" else 0,  # Txn_Type_Mobile Load
-                        1 if txn_type_input == "Send Money" else 0,  # Txn_Type_Send Money
+                        1 if txn_type_input == "Bill Payment" else 0,
+                        1 if txn_type_input == "Mobile Load" else 0,
+                        1 if txn_type_input == "Send Money" else 0,
                     ]
 
-                    # Construct feature vector (38 features in X_encoded.csv order)
+                    # Construct feature vector (38 features in order)
                     feature_vector = (
                         [time_input] + v_inputs + [amount_input] +
                         operator_encoded + region_encoded + txn_type_encoded
@@ -159,11 +161,10 @@ with tab1:
 
                         # Display results
                         st.subheader("Prediction Result")
-                        with st.container():
-                            if prediction[0] == 1:
-                                st.error("⚠️ Fraudulent Transaction Detected!")
-                            else:
-                                st.success("✅ Legitimate Transaction")
+                        if prediction[0] == 1:
+                            st.error("⚠️ Fraudulent Transaction Detected!")
+                        else:
+                            st.success("✅ Legitimate Transaction")
 
                         # Feedback form
                         st.subheader("Feedback")
@@ -173,7 +174,7 @@ with tab1:
                                 f.write(f"{prediction[0]},{feedback}\n")
                             st.success("Thank you for your feedback!")
 
-                        # Display dynamic accuracy
+                        # Display dynamic accuracy from feedback
                         try:
                             feedback_df = pd.read_csv("feedback.csv", names=["prediction", "feedback"])
                             correct = len(feedback_df[feedback_df["feedback"] == "Yes"])
@@ -199,4 +200,3 @@ with tab2:
         - **F1-Score (Fraud)**: 87%
         *Based on historical test data. Actual performance may vary.*
     """)
-
